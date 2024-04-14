@@ -143,7 +143,8 @@ NOTES:
  */
 int bitAnd(int x, int y) {
   return ~(~x|~y);
-  // ~(~x|~y) 等价于 x&y  （不知道括号能不能用...能用！）
+  // ~(~x|~y) 等价于 x&y
+  // 德摩根律
 }
 /* 
  * getByte - Extract byte n from word x
@@ -386,8 +387,49 @@ unsigned float_neg(unsigned uf) {
  *   Rating: 4
  */
 unsigned float_i2f(int x) {
-  return 2;
+  // 如果x=0，直接返回0
+  if(x == 0){
+    return 0;
+  }
+  // 先判断符号位，再取绝对值
+  unsigned int sign = (x >> 31) & 0x80000000;
+  unsigned int abs_x = x > 0 ? x : -x;
+  // 找到最高位的位置
+  unsigned int i = 32;
+  for(; i > 0; i--){
+    if((abs_x >> i) & 1){
+      break;
+    }
+  }
+  //计算指数 
+  unsigned int exp = (i + 127)<<23;
+
+  //尾数
+  unsigned int frac;
+  if(i > 23){
+    frac = (abs_x >> (i - 23)) & 0x7fffff;
+  } else {
+    frac = (abs_x << (23 - i)) & 0x7fffff;
+  }
+
+  // 如果i>23，需要进行舍入
+  // 向偶数舍入
+  if(i > 23){
+    unsigned int round = (abs_x >> (i - 24)) & 1; //需要舍弃的最高位
+    unsigned int sticky = ((abs_x << (55 - i)) & 0x7fffffff) != 0; //需要舍弃的位后面是否还有1
+    if((round && sticky) || (round && (frac & 1))){
+      frac += 1;
+    }
+  }
+  return sign + exp + frac;
+
   // 把int型的x用浮点数表示
+  // 如果x=0，直接返回0
+  // 先判断符号位，再取绝对值
+  // 然后找到最高位的位置
+  // 最后计算指数和尾数
+  // 指数计算：最高位的位置+127 bias是127
+  // 尾数计算：最高位的位置的后23位
 }
 /* 
  * float_twice - Return bit-level equivalent of expression 2*f for
@@ -401,5 +443,16 @@ unsigned float_i2f(int x) {
  *   Rating: 4
  */
 unsigned float_twice(unsigned uf) {
-  return 2;
+  // 如果是NaN，返回原值
+  if((uf << 1 >> 1) > 0x7F800000){
+    return uf;
+  } else if ((uf & 0x7F800000) != 0){
+    if(((uf + 0x00800000) & 0x80000000) != (uf & 0x80000000)) return uf;//溢出返回原值
+    return uf + 0x00800000;
+  } else {
+    return (uf & 0x80000000) | ((uf & 0x007FFFFF) << 1);
+  }
+  // 如果是NaN，返回原值
+  // 如果是标准化数，指数+1
+  // 如果是非标准化数，尾数左移一位
 }
