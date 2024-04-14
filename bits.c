@@ -395,7 +395,7 @@ unsigned float_i2f(int x) {
   unsigned int sign = (x >> 31) & 0x80000000;
   unsigned int abs_x = x > 0 ? x : -x;
   // 找到最高位的位置
-  unsigned int i = 32;
+  unsigned int i = 31;
   for(; i > 0; i--){
     if((abs_x >> i) & 1){
       break;
